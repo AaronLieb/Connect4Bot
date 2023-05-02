@@ -1,0 +1,36 @@
+.game-container {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.game-buttons {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+#game {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 5px;
+  width: 30vw;
+  margin-bottom: 1rem;
+}
+
+#game > div {
+  background-color: #ddd;
+  border: 1px solid #999;
+  aspect-ratio: 1/1;
+}
+
+div.color-1 {
+  background-color: red !important;
+}
+
+div.color-2 {
+  background-color: blue !important;
+}
