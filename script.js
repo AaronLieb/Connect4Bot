@@ -2,9 +2,17 @@ const $ = (query) => {
   return document.querySelector(query);
 }
 
+const sleep = async (ms) => {
+  return new Promise((res, rej) => {
+    setTimeout(() => {
+      res()
+    }, ms);
+  })
+}
+
 let game;
 
-const MAX_DEPTH = 4;
+const MAX_DEPTH = 5;
 
 const WIDTH = 7;
 const HEIGHT = 6;
@@ -15,22 +23,19 @@ class Game {
     gameEle.innerHTML = "";
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
       let gridItem = document.createElement("div");
+      gameEle.style.gridTemplateColumns = `repeat(${WIDTH}, 1fr)`;
+      gameEle.style.gridTemplateRows = `repeat(${HEIGHT}, 1fr)`;
       const x = i % WIDTH;
       const y = Math.floor(i / WIDTH);
       gridItem.className = `x${x}y${y}`
-      gridItem.onclick = e => { this.userMove(x, y, true); this.ai_move() }
+      gridItem.onclick = async () => {
+        let valid = await this.userMove(x, y)
+        if (valid) this.robotMove();
+      }
       gameEle.appendChild(gridItem)
     }
     this.state = {
-      board: [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-      ],
+      board: Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0)),
       turn: 1,
       moves: 0
     }
@@ -58,13 +63,14 @@ class Game {
     return validMoves;
   }
 
-  userMove(x, y) {
-    if (!this.validMove(this.state, x, y)) return;
+  async userMove(x, y) {
+    if (!this.validMove(this.state, x, y)) return false;
     $(`.x${x}y${y}`).classList.add(`color-${this.state.turn}`);
     this.state = this.makeMove(this.state, x, y);
     if (this.checkWin(this.state, x, y) > 0) {
       this.win();
     }
+    return true;
   }
 
   makeMove(state, x, y) {
@@ -79,9 +85,9 @@ class Game {
 
     if (state.moves < 7) return false;
 
-    // horizontal
     let turn = !(state.turn - 1) + 1; // swaps turns
 
+    // horizontal
     let left, right, top, bottom;
     left = x, right = x;
     for (let i = 0; i < 3; i++) {
@@ -114,7 +120,7 @@ class Game {
     // diagonal right->left
     left = x, right = x, bottom = y, top = y;
     for (let i = 0; i < 3; i++) {
-      if (left - 1 >= 0 && top - 1 >= 0 && state.board[top - 1][left - 1] == turn) { 
+      if (left - 1 >= 0 && top - 1 >= 0 && state.board[top - 1][left - 1] == turn) {
         left--;
         top--;
       }
@@ -138,11 +144,9 @@ class Game {
     return sum;
   }
 
-  score(state, a, b, depth=0) {
-    if (depth > MAX_DEPTH) {
-      return this.heuristic(state);
-    }
+  score(state, a, b, depth = 0) {
     if (state.moves == WIDTH * HEIGHT) return 0;
+    if (depth > MAX_DEPTH) return this.heuristic(state);
 
     let worst = -(WIDTH * HEIGHT - state.moves) / 2;
     if (a < worst) {
@@ -167,7 +171,9 @@ class Game {
     return a;
   }
 
-  ai_move() {
+  async robotMove() {
+    $("#float").style.opacity = 1;
+    await sleep(100); // allow the DOM to render 
     let bestMove, best = -WIDTH * HEIGHT - 2 - this.state.moves, score;
     for (let move of this.getValidMoves(this.state)) {
       let _state = this.makeMove(this.state, move.x, move.y)
@@ -175,13 +181,15 @@ class Game {
         this.userMove(move.x, move.y);
         return
       }
-      score = this.score(_state, -(WIDTH*HEIGHT-this.state.moves)/2, (WIDTH*HEIGHT-this.state.moves)/2)
+      await sleep(0.1); // allow the DOM to render 
+      score = this.score(_state, -(WIDTH * HEIGHT - this.state.moves) / 2, (WIDTH * HEIGHT - this.state.moves) / 2)
       console.log("(", move.x, move.y, ")", score);
       if (score > best) {
         bestMove = move;
         best = score;
       }
     }
+    $("#float").style.opacity = 0;
     this.userMove(bestMove.x, bestMove.y);
   }
 
