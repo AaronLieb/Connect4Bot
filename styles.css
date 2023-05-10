@@ -9,7 +9,12 @@
   display: flex !important;
   justify-content: center;
   align-items: center;
+  flex-direction: column;
   gap: 1rem;
+}
+
+select {
+  max-width: 7rem;
 }
 
 #game {

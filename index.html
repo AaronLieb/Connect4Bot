@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>Connect 4 AI</title>
+  <title>Don't Connect 4</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script defer src="script.js"></script>
@@ -13,12 +13,16 @@
 <body>
   <main class="container">
     <div class="container game-container">
-      <h1>Connect 4 AI</h1>
+      <h1 id="title">Don't Connect 4!</h1>
       <div id="float" aria-busy="true"></div>
       <div id="game">
       </div>
       <div class="container game-buttons">
-        <a id="start-button" role="button" href="javascript:startGame()">Start</a>
+        <a id="start-button" role="button" href="javascript:clickStartButton()">Start</a>
+        <select id="mode" class="select">
+          <option selected value="human">Human</option>
+          <option value="robot">Robot</option>
+        </select>
       </div>
     </div>
   </main>

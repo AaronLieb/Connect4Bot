@@ -19,6 +19,7 @@ const HEIGHT = 6;
 
 class Game {
   constructor() {
+    this.gameOver = false;
     const gameEle = $("#game")
     gameEle.innerHTML = "";
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
@@ -29,8 +30,10 @@ class Game {
       const y = Math.floor(i / WIDTH);
       gridItem.className = `x${x}y${y}`
       gridItem.onclick = async () => {
-        let valid = await this.userMove(x, y)
-        if (valid) this.robotMove();
+        if (this.gameOver) return;
+        let valid = await this.userMove(x, y);
+        if (this.gameOver) return;
+        if (valid) await this.robotMove();
       }
       gameEle.appendChild(gridItem)
     }
@@ -139,27 +142,37 @@ class Game {
   heuristic(state) {
     let sum = 0;
     for (let y = 0; y < HEIGHT; y++) {
-      if (state.board[y][3] == !(state.turn - 1) + 1) sum++;
+      for (let x = 0; x < WIDTH; x++) {
+        if (state.board[y][x] == !(state.turn - 1) + 1) {
+          sum += 3 - Math.abs(3 - x);
+        }
+      }
     }
     return sum;
   }
 
   score(state, a, b, depth = 0) {
+    // If there is a draw
     if (state.moves == WIDTH * HEIGHT) return 0;
+
+    // If we've reached the max depth, use the heuristic
     if (depth > MAX_DEPTH) return this.heuristic(state);
 
+    // Bounds checking of alpha
     let worst = -(WIDTH * HEIGHT - state.moves) / 2;
     if (a < worst) {
       a = worst;
       if (a >= b) return a;
     }
 
+    // Bounds checking of beta
     let best = (WIDTH * HEIGHT - 1 - state.moves) / 2;
     if (b > best) {
       b = best;
       if (a >= b) return b;
     }
 
+    // Recursive MinMax
     for (let move of this.getValidMoves(state)) {
       let _state = this.makeMove(state, move.x, move.y);
       if (this.checkWin(_state, move.x, move.y)) return -best;
@@ -172,33 +185,84 @@ class Game {
   }
 
   async robotMove() {
+    // Show the loading animation
     $("#float").style.opacity = 1;
-    await sleep(100); // allow the DOM to render 
-    let bestMove, best = -WIDTH * HEIGHT - 2 - this.state.moves, score;
+
+    // allow the DOM to render 
+    await sleep(100);
+
+    let worstMove, worstMoves, worst = WIDTH * HEIGHT - 1 - this.state.moves, score;
+
+    let possibleMove = false;
     for (let move of this.getValidMoves(this.state)) {
       let _state = this.makeMove(this.state, move.x, move.y)
       if (this.checkWin(_state, move.x, move.y)) {
-        this.userMove(move.x, move.y);
-        return
+        continue;
       }
-      await sleep(0.1); // allow the DOM to render 
+      possibleMove = true;
+
+      // allow the DOM to render 
+      await sleep(0.1);
+
       score = this.score(_state, -(WIDTH * HEIGHT - this.state.moves) / 2, (WIDTH * HEIGHT - this.state.moves) / 2)
+
       console.log("(", move.x, move.y, ")", score);
-      if (score > best) {
-        bestMove = move;
-        best = score;
+
+      if (score < worst) {
+        worstMoves = [];
+        worstMoves.push(move);
+        worst = score;
+      }
+      if (score == worst) {
+        worstMoves.push(move);
       }
     }
     $("#float").style.opacity = 0;
-    this.userMove(bestMove.x, bestMove.y);
+
+    if (!possibleMove) {
+      worstMove = this.getValidMoves(this.state)[0];
+    } else {
+      worstMove = worstMoves[Math.floor(Math.random() * worstMoves.length)];
+    }
+
+    this.userMove(worstMove.x, worstMove.y);
+
+    return true;
   }
 
   win() {
-    console.log(!(this.state.turn - 1) + 1, "won!")
+    const color = (this.state.turn == 1) ? "Red" : "Blue";
+    $("#title").innerText = `${color} won!`
+    this.gameOver = true;
+    console.log(color, "won!")
+  }
+}
+
+const clickStartButton = () => {
+  console.log($("#mode").value)
+  if ($("#mode").value == "human") {
+    startGame();
+  } else {
+    startRobotsGame();
   }
 }
 
 const startGame = () => {
   game = new Game();
+  game.gameOver = false;
+  $("#title").innerText = "Don't Connect 4!"
   $("#start-button").innerText = "Reset"
 }
+
+const startRobotsGame = async () => {
+  startGame()
+  while (!game.gameOver) {
+    let valid = await game.robotMove();
+    await sleep(200); // time spacing
+    if (game.gameOver) return;
+    if (valid) await game.robotMove();
+    await sleep(200); // time spacing
+  }
+}
+
+
